@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>CAFE XP</title>
+    <link rel="stylesheet" type="text/css" href="css/elements.css"/>
+    <script type='text/javascript'>
+        // In such way we connect ipcRenderer to our page.
+        window.ipcRenderer = require('electron').ipcRenderer;
+        // The ipcRenderer module provides a few methods so you can send events from the render process (web page) to the main process.
+    </script>
+  </head>
+  <body>
+    <h1>CAFE XP</h1>
+    <h2>Calculating tree probabilities in clusters</h2>
+
+    <!-- We are using node <script>document.write(process.versions.node)</script>,
+    Chrome <script>document.write(process.versions.chrome)</script>,
+    and Electron <script>document.write(process.versions.electron)</script>. -->
+    <div class="content">
+      <p>Tree file: <span id="treefile">Not selected</span>&nbsp;<button id="select_tree">...</button></p>
+      <p>Family file: <span id="famfile">Not selected</span>&nbsp;<button id="select_family">...</button></p>
+      <input type="radio" name="action" value="compute"> Compute<br />
+      <input type="radio" name="action" value="estimate lambda"> Estimate Lambda<br />
+      <input type="radio" name="action" value="reconstruct"> Reconstruct<br />
+      <input type="radio" name="action" value="simulate"> Simulate<br />
+      <label for="k">K Value</label> <input id="k" type="number" step="1" value="4"/><br />
+      <label for="alpha">Alpha</label> <input id="alpha" type="number" step="0.1" value="0.5" /><br />
+      <label for="lambda">Lambda</label> <input id="lambda" type="number" step="0.01" value="0.001"/><br />
+      <button id="launch">Go</button>
+    </div>
+    <img src="images/cafe_footer.png" width="800"/>
+    <script>
+        let launch = document.querySelector("#launch");
+
+        launch.addEventListener("click", function(event){
+            ipcRenderer.send('cafe', get_parameters());
+        });
+
+        let select_tree = document.querySelector("#select_tree");
+
+        select_tree.addEventListener("click", function(event){
+            ipcRenderer.send('select_tree', null);
+            return false;
+        });
+
+        document.querySelector("#treefile").innerText = localStorage.getItem("treefile");
+        document.querySelector("#famfile").innerText = localStorage.getItem("famfile");
+
+        ipcRenderer.on("treefile", function(event, arg) {
+            document.querySelector("#treefile").innerText = arg;
+            localStorage.setItem("treefile", arg);
+            return false;
+        })
+
+        document.querySelector("#select_family").addEventListener("click", function(event){
+            ipcRenderer.send('select_family', null);
+            return false;
+        });
+
+        ipcRenderer.on("famfile", function(event, arg) {
+            document.querySelector("#famfile").innerText = arg;
+            localStorage.setItem("famfile", arg);
+            return false;
+        });
+
+        function get_parameters() {
+            var nodes = document.getElementsByName('action');
+            var action = [].filter.call(nodes, function(e) {
+                return e.checked;
+            })[0];
+
+            return {treefile:document.querySelector("#treefile").innerText,
+                famfile:document.querySelector("#famfile").innerText,
+                k:document.querySelector("#k").value,
+                alpha:document.querySelector("#alpha").value,
+                lambda:document.querySelector("#lambda").value,
+                action:action.value
+            };
+        }
+    </script>
+  </body>
+</html>
