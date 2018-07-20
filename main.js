@@ -2,6 +2,8 @@ const {app, BrowserWindow, ipcMain} = require('electron')
 const path = require('path')
 const url = require('url')
 const dialog = require('electron').dialog;
+const { spawn, execSync } = require('child_process');
+
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -52,28 +54,54 @@ app.on('activate', () => {
   }
 })
 
+function launch(arguments) {
+    arguments[arguments.length-1] = arguments[arguments.length-1] + '"';
+
+    arguments.unshift("\"/home/befulton/Documents/GIT/CAFExp/bin/cafexp");
+    arguments.unshift("-c");
+
+
+    console.log(arguments.join(" "));
+
+    const { spawn, execSync } = require('child_process');
+
+    const bat = spawn(`bash.exe`,  arguments, {shell: true });
+
+    bat.stdout.on('data', (data) => {
+        console.log(data.toString());
+    });
+
+    bat.stderr.on('data', (data) => {
+        console.log(data.toString());
+    });
+
+    bat.on('exit', (code) => {
+        console.log(`Child exited with code ${code}`);
+    });
+
+    bat.on('error', function(err) {
+        console.log('Error launching CAFE: ' + err);
+    });
+}
+
 ipcMain.on('cafe', (event, args) => {
     console.log(args);
 
-    const { exec } = require('child_process');
-    const path = "Documents/GIT/CAFExp/bin";
-    const x = "/mnt/c/Users/befulton/";
-    const treefile = x + "Documents/GIT/CAFExp/examples/mammals_tree.txt"
-    const famfile = x + "Documents/GIT/CAFExp/Base_asr_k4a1l001.txt"
+    const windows_treefile = execSync(`bash.exe -c "wslpath \\"${args.treefile}\\""`).toString().trim();
+    const windows_famfile = execSync(`bash.exe -c "wslpath \\"${args.famfile}\\""`).toString().trim();
+
     if (args.action == 'simulate') {
-        const bat = exec(`bash -c "./cafexp -s -t ${treefile} -f ${famfile} -k ${args.k} -a ${args.alpha} -l ${args.lambda}"`);
+            launch([
+                "-s",
+                "-t", windows_treefile,
+                "-f", windows_famfile,
+                "-k", args.k,
+                "-a", args.alpha,
+                "-l", args.lambda]);
+    }
 
-        bat.stdout.on('data', (data) => {
-            console.log(data.toString());
-        });
-
-        bat.stderr.on('data', (data) => {
-            console.log(data.toString());
-        });
-
-        bat.on('exit', (code) => {
-            console.log(`Child exited with code ${code}`);
-        });
+    if (args.action == 'estimate lambda') {
+        launch(['-t', windows_treefile, '-i', windows_famfile]);
     }
 });
 
