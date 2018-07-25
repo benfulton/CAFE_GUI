@@ -3,7 +3,7 @@ const path = require('path')
 const url = require('url')
 const dialog = require('electron').dialog;
 const { spawn, execSync } = require('child_process');
-
+const fs = require("fs");
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -54,6 +54,38 @@ app.on('activate', () => {
   }
 })
 
+function countFileLines(filePath){
+    return new Promise((resolve, reject) => {
+        let lineCount = 0;
+        fs.createReadStream(filePath)
+            .on("data", (buffer) => {
+                let idx = -1;
+                lineCount--; // Because the loop will run once for idx=-1
+                do {
+                    idx = buffer.indexOf(10, idx+1);
+                    lineCount++;
+                } while (idx !== -1);
+            }).on("end", () => {
+            resolve(lineCount);
+        }).on("error", reject);
+    });
+}
+
+function readFileStart(path, num_chars) {
+    try {
+        var buf = new Buffer(num_chars);
+        var fd = fs.openSync(path, 'r');
+        fs.readSync(fd, buf, 0, num_chars, 0);
+        fs.closeSync(fd);
+        return buf;
+    }
+    catch(err)
+    {
+        console.log(err)
+        return '';
+    }
+}
+
 function launch(arguments) {
     arguments[arguments.length-1] = arguments[arguments.length-1] + '"';
 
@@ -68,11 +100,11 @@ function launch(arguments) {
     const bat = spawn(`bash.exe`,  arguments, {shell: true });
 
     bat.stdout.on('data', (data) => {
-        console.log(data.toString());
+        win.send('show_results', data.toString())
     });
 
     bat.stderr.on('data', (data) => {
-        console.log(data.toString());
+        dialog.showErrorBox("CAFE XP", data.toString());
     });
 
     bat.on('exit', (code) => {
@@ -106,13 +138,48 @@ ipcMain.on('cafe', (event, args) => {
 });
 
 ipcMain.on('select_tree', () => {
-    const file = dialog.showOpenDialog({properties: ['openFile']});
-    win.send('treefile', file)
+    try {
+        const file = dialog.showOpenDialog({properties: ['openFile']});
+        win.send('treefile', file[0])
+        var data = fs.readFileSync(file.toString());
+        win.send('treedata', data.toString());
+    }
+    catch(err)
+    {
+        console.log(err)
+        win.send('treefile', '')
+        win.send('treedata', '')
+    }
+});
+
+ipcMain.on('update_tree', (event, args) => {
+    try {
+        var data = fs.readFileSync(args);
+        win.send('treedata', data.toString())
+    }
+    catch(err)
+    {
+        console.log(err)
+        win.send('treefile', '')
+        win.send('treedata', '')
+    }
+
+});
+
+ipcMain.on('update_family', (event, args) => {
+    const c = countFileLines(args);
+    var data = readFileStart(args, 1000);
+
+    win.send('famdata', {lines: c, text: data.toString()})
 });
 
 ipcMain.on('select_family', () => {
     const file = dialog.showOpenDialog({properties: ['openFile']});
-    win.send('famfile', file)
+    win.send('famfile', file[0])
+    const c = countFileLines(file[0]);
+    var data = readFileStart(file[0], 1000);
+
+    win.send('famdata', {lines: c, text: data.toString()})
 });
 /*
 */

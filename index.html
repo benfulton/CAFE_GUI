@@ -4,11 +4,16 @@
     <meta charset="UTF-8">
     <title>CAFE XP</title>
     <link rel="stylesheet" type="text/css" href="css/elements.css"/>
+    <link rel="stylesheet" type="text/css" href="css/phylotree.css"/>
     <script type='text/javascript'>
         // In such way we connect ipcRenderer to our page.
         window.ipcRenderer = require('electron').ipcRenderer;
         // The ipcRenderer module provides a few methods so you can send events from the render process (web page) to the main process.
+        const d3 = require('d3');
+        const path = require('path');
+        require('phylotree');
     </script>
+    <script src="events.js"></script>
   </head>
   <body>
     <h1>CAFE XP</h1>
@@ -18,51 +23,51 @@
     Chrome <script>document.write(process.versions.chrome)</script>,
     and Electron <script>document.write(process.versions.electron)</script>. -->
     <div class="content">
-      <p>Tree file: <span id="treefile">Not selected</span>&nbsp;<button id="select_tree">...</button></p>
-      <p>Family file: <span id="famfile">Not selected</span>&nbsp;<button id="select_family">...</button></p>
-      <input type="radio" name="action" value="compute"> Compute<br />
-      <input type="radio" name="action" value="estimate lambda"> Estimate Lambda<br />
-      <input type="radio" name="action" value="reconstruct"> Reconstruct<br />
-      <input type="radio" name="action" value="simulate"> Simulate<br />
-      <label for="k">K Value</label> <input id="k" type="number" step="1" value="4"/><br />
-      <label for="alpha">Alpha</label> <input id="alpha" type="number" step="0.1" value="0.5" /><br />
-      <label for="lambda">Lambda</label> <input id="lambda" type="number" step="0.01" value="0.001"/><br />
-      <button id="launch">Go</button>
+      <div class="control_panel">
+        <div id="actions">
+        <input type="radio" name="action" value="compute"> Compute<br />
+        <input type="radio" name="action" value="estimate lambda"> Estimate Lambda<br />
+        <input type="radio" name="action" value="reconstruct"> Reconstruct<br />
+        <input type="radio" name="action" value="simulate"> Simulate<br />
+        </div>
+        <div id="values">
+        <label for="k">K Value</label> <input id="k" type="number" step="1" value="4"/><br />
+        <label for="alpha">Alpha</label> <input id="alpha" type="number" step="0.1" value="0.5" /><br />
+        <label for="lambda">Lambda</label> <input id="lambda" type="number" step="0.01" value="0.001"/><br />
+        <button id="launch">Go</button>
+        </div>
+        <div id="output">
+
+        </div>
+
+      </div>
+      <div>
+        <div class="user_tree data_display">
+          <p><span id="treefile" class="filename">No tree selected</span>&nbsp;<button id="select_tree">Change</button></p>
+          <svg id="tree_display" height="100%" width="1000px" />
+        </div>
+        <div id="family_display" class="data_display">
+          <p><span id="famfile" class="filename">No file selected</span>&nbsp;<button id="select_family">Change</button></p>
+        </div>
+      </div>
+
     </div>
+
     <img src="images/cafe_footer.png" width="800"/>
     <script>
-        let launch = document.querySelector("#launch");
 
-        launch.addEventListener("click", function(event){
-            ipcRenderer.send('cafe', get_parameters());
-        });
 
-        let select_tree = document.querySelector("#select_tree");
+        const tree_file = localStorage.getItem("treefile");
+        const tree_file_display = document.querySelector("#treefile");
+        tree_file_display.innerText = path.basename(tree_file);
+        ipcRenderer.send('update_tree', tree_file);
 
-        select_tree.addEventListener("click", function(event){
-            ipcRenderer.send('select_tree', null);
-            return false;
-        });
+        const family_file = localStorage.getItem("famfile");
+        const family_file_display = document.querySelector("#famfile");
+        family_file_display.innerText = path.basename(family_file);
+        ipcRenderer.send('update_family', family_file);
 
-        document.querySelector("#treefile").innerText = localStorage.getItem("treefile");
-        document.querySelector("#famfile").innerText = localStorage.getItem("famfile");
 
-        ipcRenderer.on("treefile", function(event, arg) {
-            document.querySelector("#treefile").innerText = arg;
-            localStorage.setItem("treefile", arg);
-            return false;
-        })
-
-        document.querySelector("#select_family").addEventListener("click", function(event){
-            ipcRenderer.send('select_family', null);
-            return false;
-        });
-
-        ipcRenderer.on("famfile", function(event, arg) {
-            document.querySelector("#famfile").innerText = arg;
-            localStorage.setItem("famfile", arg);
-            return false;
-        });
 
         function get_parameters() {
             var nodes = document.getElementsByName('action');
@@ -70,14 +75,46 @@
                 return e.checked;
             })[0];
 
-            return {treefile:document.querySelector("#treefile").innerText,
-                famfile:document.querySelector("#famfile").innerText,
+            return {treefile:localStorage.getItem("treefile"),
+                famfile:localStorage.getItem("famfile"),
                 k:document.querySelector("#k").value,
                 alpha:document.querySelector("#alpha").value,
                 lambda:document.querySelector("#lambda").value,
                 action:action.value
             };
         }
+
+        function draw_tree(strTree) {
+            var tree = d3.layout.phylotree()
+            // create a tree layout object
+                .svg(d3.select("#tree_display"));
+            // render to this SVG element
+            tree(strTree)
+            // parse the Newick into a d3 hierarchy object with additional fields
+                .spacing_y(100)
+                .layout();
+        }
+
+        function draw_families(data) {
+            var parsedCSV = d3.tsv.parseRows(data);
+
+            var container = d3.select("#family_display")
+                .append("table")
+
+                .selectAll("tr")
+                .data(parsedCSV).enter()
+                .append("tr")
+
+                .selectAll("td")
+                .data(function (d) {
+                    return d;
+                }).enter()
+                .append("td")
+                .text(function (d) {
+                    return d;
+                });
+        }
+
     </script>
   </body>
 </html>

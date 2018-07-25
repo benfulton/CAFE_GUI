@@ -149,3 +149,36 @@ label {
 input[type=number] {
     width: 50px;
 }
+
+#family_display {
+    overflow: auto;
+    font-family: "Courier New";
+    white-space: nowrap;
+}
+
+#family_display table {
+    font-size: 11px;
+    text-align: right;
+    line-height: 100%;
+}
+
+.data_display {
+    border: 5px solid lightgray;
+    padding: 1%;
+    height: 40%;
+    width: 90%;
+}
+
+.filename {
+    font-family: "Gill Sans";
+}
+
+.control_panel {
+    display:flex;
+    height: 20%;
+    margin-bottom: 10px;
+}
+
+.control_panel #actions, #values {
+    flex: 1;
+}
