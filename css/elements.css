@@ -179,6 +179,13 @@ input[type=number] {
     margin-bottom: 10px;
 }
 
-.control_panel #actions, #values {
+.control_panel #actions, #values, #results {
     flex: 1;
+}
+
+#legend-increase-decrease {
+    float:right;
+    font-size: 12px;
+    line-height: 12px;
+    display: none;
 }

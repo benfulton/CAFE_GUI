@@ -22,20 +22,41 @@ ipcRenderer.on("famfile", function(event, arg) {
 });
 
 ipcRenderer.on("show_results", function(event, arg) {
-    document.querySelector("#output").innerText = arg;
+    document.querySelector("#iteration_lambda").innerText = arg.lambda;
+    document.querySelector("#iteration_id").innerText = arg.iteration;
+    document.querySelector("#iteration_score").innerText = arg.score;
     return false;
 });
 
-document.querySelector("#launch").addEventListener("click", function(event){
-    ipcRenderer.send('cafe', get_parameters());
+var nodeColorizer = function(element, data) {
+};
+
+ipcRenderer.on("colortree", function(event, arg) {
+    $("#legend-increase-decrease").show();
+    tree.style_nodes((element, data) => {
+        const name = tree.descendants(data).map(n => n.name).sort().join('');
+        console.log(name);
+        if (arg[name] == 'Increase')
+            element.style('fill', 'lightgreen');
+        if (arg[name] == 'Decrease')
+            element.style('fill', 'red');
+
+    });
+    tree.update();
 });
 
-document.querySelector("#select_tree").addEventListener("click", function(event){
-    ipcRenderer.send('select_tree', null);
-    return false;
-});
+$(function() {
+    $("#launch").click(function (event) {
+        ipcRenderer.send('cafe', get_parameters());
+    });
 
-document.querySelector("#select_family").addEventListener("click", function(event){
-    ipcRenderer.send('select_family', null);
-    return false;
+    $("#select_tree").click(function (event) {
+        ipcRenderer.send('select_tree', null);
+        return false;
+    });
+
+    $("#select_family").click("click", function (event) {
+        ipcRenderer.send('select_family', null);
+        return false;
+    });
 });

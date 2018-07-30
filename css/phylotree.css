@@ -23,8 +23,6 @@ stroke-width: 0.5px;
 }
 
 .internal-node circle, .internal-node ellipse, .internal-node rect{
-fill: #CCC;
-stroke: white;
 stroke-width: 0.5px;
 }
 
@@ -83,11 +81,6 @@ stroke-width: 3px;
 
 .branch:hover {
 stroke-width: 10px;
-}
-
-.internal-node circle:hover, .internal-node ellipse:hover, .internal-node rect:hover {
-fill: white;
-stroke: #CCC;
 }
 
 .tree-widget {

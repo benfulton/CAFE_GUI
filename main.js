@@ -86,6 +86,27 @@ function readFileStart(path, num_chars) {
     }
 }
 
+function read_increase_decrease(filename) {
+    var lines = require('fs').readFileSync(filename, 'utf-8')
+        .split('\n')
+        .filter(Boolean);
+
+    return lines.map( line => {
+        const x = line.split('\t')
+        const y = x[1].split('/');
+        const inc = parseInt(y[0]);
+        const dec = parseInt(y[1]);
+        if (dec > inc)
+            return [x[0], 'Decrease'];
+        else if (inc > dec)
+            return [x[0], 'Increase'];
+        return [x[0], 'Constant'];
+    }).reduce((hash, elem) => {
+        hash[elem[0]] = elem[1];
+        return hash;
+    }, {});
+}
+
 function launch(arguments) {
     arguments[arguments.length-1] = arguments[arguments.length-1] + '"';
 
@@ -99,8 +120,19 @@ function launch(arguments) {
 
     const bat = spawn(`bash.exe`,  arguments, {shell: true });
 
+    const x = { iteration: 1, lambda: 0, score: 0 };
+
     bat.stdout.on('data', (data) => {
-        win.send('show_results', data.toString())
+        console.log(data.toString());
+        const d = data.toString().split('\n');
+        x.iteration++;
+        d.forEach( v => {
+            if (v.startsWith('Lambda: '))
+                x.lambda = parseFloat(v.substring(9));
+            if (v.startsWith('Score (-lnL): '))
+                x.score = parseFloat(v.substring(14));
+        });
+        win.send('show_results', x)
     });
 
     bat.stderr.on('data', (data) => {
@@ -109,6 +141,7 @@ function launch(arguments) {
 
     bat.on('exit', (code) => {
         console.log(`Child exited with code ${code}`);
+        win.send('colortree', read_increase_decrease('Base_clade_results.txt'));
     });
 
     bat.on('error', function(err) {
@@ -156,6 +189,7 @@ ipcMain.on('update_tree', (event, args) => {
     try {
         var data = fs.readFileSync(args);
         win.send('treedata', data.toString())
+
     }
     catch(err)
     {
